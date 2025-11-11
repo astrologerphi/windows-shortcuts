@@ -27,7 +27,7 @@ impl SingleInstance {
         let handle = unsafe { CreateMutexW(None, true, PCWSTR(name.as_ptr())) }
             .map_err(|err| format!("Fail to setup single instance, {err}"))?;
         let handle =
-            if windows::core::Error::from_win32().code() == ERROR_ALREADY_EXISTS.to_hresult() {
+            if windows::core::Error::from_thread().code() == ERROR_ALREADY_EXISTS.to_hresult() {
                 None
             } else {
                 Some(handle)

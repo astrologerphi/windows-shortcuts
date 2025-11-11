@@ -138,7 +138,7 @@ fn take_screenshot(item: &GraphicsCaptureItem, save_dir: &str) -> Result<()> {
         bits
     };
 
-    let folder = StorageFolder::GetFolderFromPathAsync(&HSTRING::from(save_dir))?.get()?;
+    let folder = StorageFolder::GetFolderFromPathAsync(&HSTRING::from(save_dir))?.GetResults()?;
     let time = std::time::SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
@@ -149,11 +149,12 @@ fn take_screenshot(item: &GraphicsCaptureItem, save_dir: &str) -> Result<()> {
             &HSTRING::from(file_name),
             CreationCollisionOption::ReplaceExisting,
         )?
-        .get()?;
+        .GetResults()?;
 
     {
-        let stream = file.OpenAsync(FileAccessMode::ReadWrite)?.get()?;
-        let encoder = BitmapEncoder::CreateAsync(BitmapEncoder::PngEncoderId()?, &stream)?.get()?;
+        let stream = file.OpenAsync(FileAccessMode::ReadWrite)?.GetResults()?;
+        let encoder =
+            BitmapEncoder::CreateAsync(BitmapEncoder::PngEncoderId()?, &stream)?.GetResults()?;
         encoder.SetPixelData(
             BitmapPixelFormat::Bgra8,
             BitmapAlphaMode::Premultiplied,
@@ -164,7 +165,7 @@ fn take_screenshot(item: &GraphicsCaptureItem, save_dir: &str) -> Result<()> {
             &bits,
         )?;
 
-        encoder.FlushAsync()?.get()?;
+        encoder.FlushAsync()?.GetResults()?;
     }
 
     Ok(())

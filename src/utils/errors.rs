@@ -15,7 +15,7 @@ where
     unsafe {
         SetLastError(ERROR_SUCCESS);
         let result = f();
-        let error = Error::from_win32();
+        let error = Error::from_thread();
         if error == ERROR_SUCCESS.into() {
             Ok(result)
         } else {
@@ -31,7 +31,7 @@ pub trait CheckError: Sized {
 impl CheckError for HANDLE {
     fn check_error(self) -> windows::core::Result<Self> {
         if self.is_invalid() {
-            Err(Error::from_win32())
+            Err(Error::from_thread())
         } else {
             Ok(self)
         }
@@ -42,7 +42,7 @@ impl CheckError for HWND {
     fn check_error(self) -> windows::core::Result<Self> {
         // If the function fails, the return value is NULL.
         if self.0 == std::ptr::null_mut() {
-            Err(Error::from_win32())
+            Err(Error::from_thread())
         } else {
             Ok(self)
         }
@@ -53,7 +53,7 @@ impl CheckError for u16 {
     fn check_error(self) -> windows::core::Result<Self> {
         // If the function fails, the return value is zero
         if self == 0 {
-            Err(Error::from_win32())
+            Err(Error::from_thread())
         } else {
             Ok(self)
         }
