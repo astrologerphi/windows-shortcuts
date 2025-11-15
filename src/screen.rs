@@ -33,6 +33,19 @@ use modes::CaptureMode;
 use window_info::WindowInfo;
 use windows::core::Interface;
 
+macro_rules! wait_async {
+    ($operation:expr) => {{
+        let op = $operation;
+        loop {
+            match op.Status()?.0 {
+                0 => std::thread::sleep(std::time::Duration::from_millis(1)),
+                1 => break op.GetResults()?,
+                _ => return Err(op.ErrorCode()?.into()),
+            }
+        }
+    }};
+}
+
 fn create_capture_item_for_window(window_handle: HWND) -> Result<GraphicsCaptureItem> {
     let interop = windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
     unsafe { interop.CreateForWindow(window_handle) }
@@ -138,23 +151,25 @@ fn take_screenshot(item: &GraphicsCaptureItem, save_dir: &str) -> Result<()> {
         bits
     };
 
-    let folder = StorageFolder::GetFolderFromPathAsync(&HSTRING::from(save_dir))?.GetResults()?;
+    let folder = wait_async!(StorageFolder::GetFolderFromPathAsync(&HSTRING::from(
+        save_dir
+    ))?);
     let time = std::time::SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_secs();
     let file_name = time.to_string() + ".png";
-    let file = folder
-        .CreateFileAsync(
-            &HSTRING::from(file_name),
-            CreationCollisionOption::ReplaceExisting,
-        )?
-        .GetResults()?;
+    let file = wait_async!(folder.CreateFileAsync(
+        &HSTRING::from(file_name),
+        CreationCollisionOption::ReplaceExisting,
+    )?);
 
     {
-        let stream = file.OpenAsync(FileAccessMode::ReadWrite)?.GetResults()?;
-        let encoder =
-            BitmapEncoder::CreateAsync(BitmapEncoder::PngEncoderId()?, &stream)?.GetResults()?;
+        let stream = wait_async!(file.OpenAsync(FileAccessMode::ReadWrite)?);
+        let encoder = wait_async!(BitmapEncoder::CreateAsync(
+            BitmapEncoder::PngEncoderId()?,
+            &stream
+        )?);
         encoder.SetPixelData(
             BitmapPixelFormat::Bgra8,
             BitmapAlphaMode::Premultiplied,
@@ -164,8 +179,7 @@ fn take_screenshot(item: &GraphicsCaptureItem, save_dir: &str) -> Result<()> {
             1.0,
             &bits,
         )?;
-
-        encoder.FlushAsync()?.GetResults()?;
+        wait_async!(encoder.FlushAsync()?);
     }
 
     Ok(())
